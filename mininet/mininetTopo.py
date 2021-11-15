@@ -1,6 +1,6 @@
 '''
-Please add your name: Jeremiah Ang
-Please add your matric number: A0155950B
+Please add your name: Qing Bowen
+Please add your matric number: A0243489R
 '''
 
 import os
@@ -25,44 +25,34 @@ class TreeTopo(Topo):
     def addLinkInfo(self, h1, h2, bw):
         if h1 not in self.linkInfo:
             self.linkInfo[h1] = {}
-
         self.linkInfo[h1][h2] = int(bw)
 
     def readFromFile(self, filename):
+        f = open(filename)
+        config = f.readline().strip().split(' ')
+        lines = f.readlines()
+        f.close()
+        N, M, L = [int(i) for i in config]
 
-        with open(filename) as fd:
-            header = fd.readline()
-            N, M, L = header.split()
-            for i in range(int(N)):
-                host_number = i + 1
-                self.addHost('h%d' % host_number)
+        for n in range(N):
+            self.addHost('h%d' % (n+1))
+            
+        for m in range(M):
+            sconfig = {'dpid': "%016x" % (m+1)}
+            self.addSwitch('s%d' % (m+1), **sconfig)
 
-            for i in range(int(M)):
-                switch_number = i + 1
-                sconfig = {'dpid': "%016x" % switch_number}
-                self.addSwitch('s%d' % switch_number, **sconfig)
-
-            for i in range(int(L)):
-                line = fd.readline()
-                h1, h2, bw = line.split(",")
-                self.addLinkInfo(h1,h2,bw)
-                self.addLinkInfo(h2,h1,bw)
-                self.addLink(h1, h2)
+        for l in lines:
+            d1, d2, bw = l.strip().split(',')
+            self.addLinkInfo(h1,h2,bw)
+            self.addLinkInfo(h2,h1,bw)
+            self.addLink(d1, d2)
 
 def createQosQueue(net, target, switch_interface, bw):
-
-    # Values in unit Mbps
-    bw = bw * 1000000
-    W = 0.8 * bw 
-    X = 0.6 * bw
-    Y = 0.3 * bw
-    Z = 0.2 * bw
     os.system('sudo ovs-vsctl -- set Port %s qos=@newqos \
                -- --id=@newqos create QoS type=linux-htb other-config:max-rate=%d queues=0=@q0,1=@q1,2=@q2 \
-               -- --id=@q0 create queue other-config:max-rate=%d other-config:min-rate=%d \
-               -- --id=@q1 create queue other-config:min-rate=%d \
-               -- --id=@q2 create queue other-config:max-rate=%d' 
-               % (switch_interface, bw, X, Y, W, Z))
+               -- --id=@q0 create queue other-config:max-rate=%d \
+               -- --id=@q1 create queue other-config:min-rate=%d'
+               % (switch_interface, bw*1000000, bw*0.5*1000000, bw*0.8*1000000))
 
 def createQosQueues(net, linkInfo):
     for switch in net.switches:
@@ -74,7 +64,6 @@ def createQosQueues(net, linkInfo):
                 switch_interface = intf.link.intf1 if n1 == switch else intf.link.intf2
                 bw = linkInfo[switch.name][target.name]
                 switch_interface_name = switch_interface.name
-                info('**** Adding Queue for Link: %s Interface: %s. Bandwidth: %s\n' % (intf.link, switch_interface_name, bw, ))
                 createQosQueue(net, target, switch_interface_name, bw)
 
 
