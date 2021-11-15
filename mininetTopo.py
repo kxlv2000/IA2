@@ -49,7 +49,7 @@ class TreeTopo(Topo):
 
 def createQosQueue(net, target, switch_interface, bw):
     os.system('sudo ovs-vsctl -- set Port %s qos=@newqos \
-               -- --id=@newqos create QoS type=linux-htb other-config:max-rate=%d queues=0=@q0,1=@q1,2=@q2 \
+               -- --id=@newqos create QoS type=linux-htb other-config:max-rate=%d queues=0=@q0,1=@q1\
                -- --id=@q0 create queue other-config:max-rate=%d \
                -- --id=@q1 create queue other-config:min-rate=%d'
                % (switch_interface, bw*1000000, bw*0.5*1000000, bw*0.8*1000000))
