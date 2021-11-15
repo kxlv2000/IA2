@@ -43,8 +43,8 @@ class TreeTopo(Topo):
 
         for l in lines:
             d1, d2, bw = l.strip().split(',')
-            self.addLinkInfo(h1,h2,bw)
-            self.addLinkInfo(h2,h1,bw)
+            self.addLinkInfo(d1,d2,bw)
+            self.addLinkInfo(d2,d1,bw)
             self.addLink(d1, d2)
 
 def createQosQueue(net, target, switch_interface, bw):
