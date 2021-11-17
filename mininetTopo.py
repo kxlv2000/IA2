@@ -15,8 +15,9 @@ from mininet.node import RemoteController
 
 net = None
 
+
 class TreeTopo(Topo):
-            
+
     def __init__(self):
         # Initialize topology
         Topo.__init__(self)
@@ -36,17 +37,16 @@ class TreeTopo(Topo):
 
         for n in range(N):
             self.addHost('h%d' % (n+1))
-            
+
         for m in range(M):
             t_head = {'dpid': "%016x" % (m+1)}
             self.addSwitch('s%d' % (m+1), **t_head)
 
         for l in lines:
             d1, d2, bw = l.strip().split(',')
-            self.add_info(d1,d2,bw)
-            self.add_info(d2,d1,bw)
+            self.add_info(d1, d2, bw)
+            self.add_info(d2, d1, bw)
             self.addLink(d1, d2)
-
 
 
 def startNetwork():
@@ -55,8 +55,9 @@ def startNetwork():
     topo.read("topology.in")
 
     global net
-    net = Mininet(topo=topo, link = TCLink,
-                  controller=lambda name: RemoteController(name, ip='192.168.56.1'),
+    net = Mininet(topo=topo, link=TCLink,
+                  controller=lambda name: RemoteController(
+                      name, ip='192.168.56.1'),
                   listenPort=6633, autoSetMacs=True)
 
     info('** Starting the network\n')
@@ -72,16 +73,16 @@ def startNetwork():
                 else:
                     targets = intf.link.intf1.node
                     sw_intf = intf.link.intf2
-                bw = topo.linkInfo[switch.name][targets.name]
-                sw_intf_name = sw_intf.name
+                bw = topo.linkInfo[switch.name][targets.name]*1000000
                 os.system('sudo ovs-vsctl -- set Port %s qos=@newqos \
-               -- --id=@newqos create QoS type=linux-htb other-config:max-rate=%d queues=0=@q0,1=@q1\
-               -- --id=@q0 create queue other-config:max-rate=%d \
-               -- --id=@q1 create queue other-config:min-rate=%d'
-               % (sw_intf, bw*1000000, bw*0.5*1000000, bw*0.8*1000000))
-    
+               -- --id=@newqos create QoS type=linux-htb other-head:max-rate=%d queues=0=@q0,1=@q1\
+               -- --id=@q0 create queue other-head:max-rate=%d \
+               -- --id=@q1 create queue other-head:min-rate=%d'
+                          % (sw_intf, bw, bw*0.5, bw*0.8))
+
     info('** Running CLI\n')
     CLI(net)
+
 
 def stopNetwork():
     if net is not None:
