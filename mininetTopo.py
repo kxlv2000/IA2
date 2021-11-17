@@ -75,9 +75,9 @@ def startNetwork():
                     sw_intf = intf.link.intf2
                 bw = topo.linkInfo[switch.name][targets.name]*1000000
                 os.system('sudo ovs-vsctl -- set Port %s qos=@newqos \
-               -- --id=@newqos create QoS type=linux-htb other-head:max-rate=%d queues=0=@q0,1=@q1\
-               -- --id=@q0 create queue other-head:max-rate=%d \
-               -- --id=@q1 create queue other-head:min-rate=%d'
+               -- --id=@newqos create QoS type=linux-htb other-config:max-rate=%d queues=0=@q0,1=@q1\
+               -- --id=@q0 create queue other-config:max-rate=%d \
+               -- --id=@q1 create queue other-config:min-rate=%d'
                           % (sw_intf, bw, bw*0.5, bw*0.8))
 
     info('** Running CLI\n')
