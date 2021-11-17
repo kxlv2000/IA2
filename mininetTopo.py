@@ -20,57 +20,39 @@ class TreeTopo(Topo):
     def __init__(self):
         # Initialize topology
         Topo.__init__(self)
-        self.linkInfo = {}
+        self.linkInfo = dict()
 
-    def addLinkInfo(self, h1, h2, bw):
+    def add_info(self, h1, h2, bw):
         if h1 not in self.linkInfo:
-            self.linkInfo[h1] = {}
+            self.linkInfo[h1] = dict()
         self.linkInfo[h1][h2] = int(bw)
 
-    def readFromFile(self, filename):
+    def read(self, filename):
         f = open(filename)
-        config = f.readline().strip().split(' ')
+        head = f.readline().strip().split(' ')
         lines = f.readlines()
         f.close()
-        N, M, L = [int(i) for i in config]
+        N, M, L = [int(i) for i in head]
 
         for n in range(N):
             self.addHost('h%d' % (n+1))
             
         for m in range(M):
-            sconfig = {'dpid': "%016x" % (m+1)}
-            self.addSwitch('s%d' % (m+1), **sconfig)
+            t_head = {'dpid': "%016x" % (m+1)}
+            self.addSwitch('s%d' % (m+1), **t_head)
 
         for l in lines:
             d1, d2, bw = l.strip().split(',')
-            self.addLinkInfo(d1,d2,bw)
-            self.addLinkInfo(d2,d1,bw)
+            self.add_info(d1,d2,bw)
+            self.add_info(d2,d1,bw)
             self.addLink(d1, d2)
 
-
-def createQosQueues(net, linkInfo):
-    for switch in net.switches:
-        for intf in switch.intfList():
-            if intf.link:
-                if intf.link.intf1.node == switch:
-                    target = intf.link.intf2.node
-                    switch_interface = intf.link.intf1
-                else:
-                    target = intf.link.intf1.node
-                    switch_interface = intf.link.intf2
-                bw = linkInfo[switch.name][target.name]
-                switch_interface_name = switch_interface.name
-                os.system('sudo ovs-vsctl -- set Port %s qos=@newqos \
-               -- --id=@newqos create QoS type=linux-htb other-config:max-rate=%d queues=0=@q0,1=@q1\
-               -- --id=@q0 create queue other-config:max-rate=%d \
-               -- --id=@q1 create queue other-config:min-rate=%d'
-               % (switch_interface, bw*1000000, bw*0.5*1000000, bw*0.8*1000000))
 
 
 def startNetwork():
     info('** Creating the tree network\n')
     topo = TreeTopo()
-    topo.readFromFile("topology.in")
+    topo.read("topology.in")
 
     global net
     net = Mininet(topo=topo, link = TCLink,
@@ -79,12 +61,24 @@ def startNetwork():
 
     info('** Starting the network\n')
     net.start()
-    net.waitConnected()
-
-    info('** Creating QoS Queues\n')
-    createQosQueues(net, topo.linkInfo)
 
     # Create QoS Queues
+    for switch in net.switches:
+        for intf in switch.intfList():
+            if intf.link:
+                if intf.link.intf1.node == switch:
+                    targets = intf.link.intf2.node
+                    sw_intf = intf.link.intf1
+                else:
+                    targets = intf.link.intf1.node
+                    sw_intf = intf.link.intf2
+                bw = topo.linkInfo[switch.name][targets.name]
+                sw_intf_name = sw_intf.name
+                os.system('sudo ovs-vsctl -- set Port %s qos=@newqos \
+               -- --id=@newqos create QoS type=linux-htb other-head:max-rate=%d queues=0=@q0,1=@q1\
+               -- --id=@q0 create queue other-head:max-rate=%d \
+               -- --id=@q1 create queue other-head:min-rate=%d'
+               % (sw_intf, bw*1000000, bw*0.5*1000000, bw*0.8*1000000))
     
     info('** Running CLI\n')
     CLI(net)
